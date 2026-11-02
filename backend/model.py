@@ -1,8 +1,7 @@
 """
 model.py
 --------
-Model loader supporting Keras/TensorFlow ResNet50 (5-class DR) and PyTorch models.
-Specifically loads model.weights (1) / model.weights (1).weights.h5.
+Model loader supporting Keras/TensorFlow ResNet50 (5-class DR).
 """
 
 import os
@@ -37,26 +36,40 @@ def build_keras_resnet50_model():
 
 def load_hybrid_model(model_path: str = None, device=None, num_classes: int = None):
     """
-    Loads trained weights.
-    Prioritizes model.weights (1).weights.h5 / model.weights (1).h5,
-    falling back to config.json or PyTorch checkpoints.
+    Loads trained Keras ResNet50 weights.
+    Prioritizes model.weights (1).weights.h5 / model.weights (1).h5.
+    If no weights file is found on disk, initializes the architecture
+    so the server starts and serves /health and /model-info without crashing.
     """
     model_dir = os.path.join(config.BASE_DIR, "models")
 
-    # Check for model.weights (1)
-    target_weights = os.path.join(model_dir, "model.weights (1).weights.h5")
-    raw_h5 = os.path.join(model_dir, "model.weights (1).h5")
+    # Candidates for weights file
+    candidates = [
+        os.path.join(model_dir, "model.weights (1).weights.h5"),
+        os.path.join(model_dir, "model.weights (1).h5"),
+        os.path.join(model_dir, "model.weights.h5"),
+    ]
 
-    if not os.path.isfile(target_weights) and os.path.isfile(raw_h5):
-        import shutil
-        shutil.copyfile(raw_h5, target_weights)
+    target_weights = None
+    for c in candidates:
+        if os.path.isfile(c):
+            target_weights = c
+            break
 
-    if os.path.isfile(target_weights):
+    # If an .h5 exists but not .weights.h5, copy it
+    if target_weights and not target_weights.endswith(".weights.h5"):
+        clean_name = target_weights.replace(".h5", ".weights.h5")
+        if not os.path.isfile(clean_name):
+            import shutil
+            shutil.copyfile(target_weights, clean_name)
+        target_weights = clean_name
+
+    model = build_keras_resnet50_model()
+    model._backend_type = "keras"
+
+    if target_weights and os.path.isfile(target_weights):
         try:
-            model = build_keras_resnet50_model()
             model.load_weights(target_weights)
-            model._backend_type = "keras"
-
             return model, {
                 "status": "full",
                 "message": None,
@@ -65,48 +78,11 @@ def load_hybrid_model(model_path: str = None, device=None, num_classes: int = No
             }
         except Exception as e:
             raise ModelLoadError(f"Failed to load weights from {target_weights}: {e}")
-
-    # Fallback to PyTorch
-    import torch
-    import torch.nn as nn
-    from torchvision import models
-
-    model_path = model_path or config.MODEL_PATH
-    device = device or config.DEVICE
-    num_classes = num_classes or config.NUM_CLASSES
-
-    if not os.path.isfile(model_path):
-        raise ModelLoadError(
-            f"No valid model weights found in {model_dir}. Expected model.weights (1).h5 or .pth file."
-        )
-
-    class PyTorchHybrid(nn.Module):
-        def __init__(self, num_cls=5):
-            super().__init__()
-            self.efficientnet = models.efficientnet_b0(weights=None)
-            self.efficientnet.classifier = nn.Identity()
-            self.resnet = models.resnet50(weights=None)
-            self.resnet.fc = nn.Identity()
-            self.classifier = nn.Sequential(
-                nn.Linear(1280 + 2048, 512),
-                nn.ReLU(),
-                nn.Dropout(0.5),
-                nn.Linear(512, num_cls)
-            )
-
-        def forward(self, x):
-            f1 = self.efficientnet(x)
-            f2 = self.resnet(x)
-            fused = torch.cat((f1, f2), dim=1)
-            return self.classifier(fused)
-
-    model = PyTorchHybrid(num_classes=num_classes)
-    checkpoint = torch.load(model_path, map_location=device)
-    state_dict = checkpoint.get("state_dict", checkpoint.get("model_state_dict", checkpoint))
-
-    model.load_state_dict(state_dict)
-    model.to(device)
-    model.eval()
-    model._backend_type = "pytorch"
-
-    return model, {"status": "full", "message": None, "checkpoint_classes": num_classes}
+    else:
+        # Fallback graceful mode: model loaded without weights so server stays healthy
+        return model, {
+            "status": "partial",
+            "message": "Model running with initial weights. Upload weights to models/ for full inference.",
+            "checkpoint_classes": config.NUM_CLASSES,
+            "architecture": "ResNet50 (Keras 5-Class)"
+        }
