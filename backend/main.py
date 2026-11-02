@@ -93,6 +93,15 @@ def _get_model_or_503():
 # Routes
 # --------------------------------------------------------------------------
 
+@app.get("/")
+def root():
+    return {
+        "service": "Diabetic Retinopathy AI Screening Backend",
+        "status": "online",
+        "docs": "/docs",
+        "health": "/health"
+    }
+
 @app.get("/health")
 def health():
     return {
