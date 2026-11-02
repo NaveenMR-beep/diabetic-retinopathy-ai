@@ -2,7 +2,7 @@
 inference.py
 ------------
 Image validation, preprocessing, prediction, and Grad-CAM-to-base64
-supporting both Keras and PyTorch models.
+supporting TFLite, Keras, and PyTorch models.
 """
 
 import base64
@@ -61,11 +61,11 @@ def preprocess(image: Image.Image, model=None):
     """
     Prepares input tensor for prediction according to model backend.
     """
-    backend_type = getattr(model, "_backend_type", "keras") if model else "keras"
+    backend_type = getattr(model, "_backend_type", "tflite") if model else "tflite"
 
     resized = image.resize(config.IMAGE_SIZE)
 
-    if backend_type == "keras":
+    if backend_type in ("tflite", "keras"):
         # Returns float32 numpy array [1, 224, 224, 3] in RGB [0, 255]
         arr = np.array(resized, dtype=np.float32)
         return np.expand_dims(arr, axis=0)
@@ -76,10 +76,18 @@ def preprocess(image: Image.Image, model=None):
         return tensor.unsqueeze(0)
 
 
-def run_prediction(model, input_tensor, device) -> dict:
-    backend_type = getattr(model, "_backend_type", "keras")
+def softmax(x):
+    e = np.exp(x - np.max(x))
+    return e / e.sum(axis=-1, keepdims=True)
 
-    if backend_type == "keras":
+
+def run_prediction(model, input_tensor, device) -> dict:
+    backend_type = getattr(model, "_backend_type", "tflite")
+
+    if backend_type == "tflite":
+        preds, conv_feats = model.predict(input_tensor)
+        probabilities = softmax(preds)[0]
+    elif backend_type == "keras":
         import tensorflow as tf
         inp_arr = np.array(input_tensor, dtype=np.float32)
         outputs = model(inp_arr, training=False)
