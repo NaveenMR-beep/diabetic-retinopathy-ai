@@ -9,8 +9,6 @@ copy — lives here so the rest of the codebase never hard-codes it.
 """
 
 import os
-import torch
-from torchvision import transforms
 
 # --------------------------------------------------------------------------
 # 1. PATHS & DEVICE
@@ -19,39 +17,21 @@ from torchvision import transforms
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Path to the trained hybrid model weights.
-# Place your .pth file at backend/models/hybrid_model_aptos_best.pth
-# (or override with the MODEL_PATH environment variable).
 MODEL_PATH = os.environ.get(
     "MODEL_PATH",
     os.path.join(BASE_DIR, "models", "hybrid_model_aptos_best.pth"),
 )
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = "cuda" if os.environ.get("USE_CUDA", "0") == "1" else "cpu"
 
 NUM_CLASSES = 5
-
-# --------------------------------------------------------------------------
-# 2. ⚙️ IMAGE PREPROCESSING — EDIT THIS SECTION IF YOUR TRAINING PIPELINE
-#    USED DIFFERENT TRANSFORMS. This is the ONLY place preprocessing is
-#    defined; inference.py imports PREDICTION_TRANSFORM from here.
-# --------------------------------------------------------------------------
-#
-# Default assumes standard ImageNet-style normalization at 224x224, which is
-# what both EfficientNet-B0 and ResNet50 expect when trained from torchvision
-# pretrained backbones. If your training notebook used different resize
-# dimensions, mean/std, or additional augmentation-free transforms
-# (e.g. CLAHE, circle-cropping of the fundus image), replace the Compose
-# below. Do NOT change anything else in the app to adjust preprocessing.
 
 IMAGE_SIZE = (224, 224)
 NORMALIZE_MEAN = [0.485, 0.456, 0.406]
 NORMALIZE_STD = [0.229, 0.224, 0.225]
 
-PREDICTION_TRANSFORM = transforms.Compose([
-    transforms.Resize(IMAGE_SIZE),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=NORMALIZE_MEAN, std=NORMALIZE_STD),
-])
+# Lazy-loaded transform if PyTorch is ever installed/used
+PREDICTION_TRANSFORM = None
 
 # --------------------------------------------------------------------------
 # 3. CLASS NAMES
