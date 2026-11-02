@@ -1,0 +1,30 @@
+# Python / Virtual Environment
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.log
+
+# Large Model Weights (exceeds GitHub 100MB limit)
+*.pth
+*.h5
+*.keras
+*.weights.h5
+backend/models/*.pth
+backend/models/*.h5
+backend/models/*.weights.h5
+!backend/models/PLACE_MODEL_HERE.txt
+
+# Node / Frontend
+node_modules/
+dist/
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# System & OS
+.DS_Store
+Thumbs.db

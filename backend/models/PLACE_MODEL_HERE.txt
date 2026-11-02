@@ -1,0 +1,7 @@
+Place your trained weights file here as:
+
+    hybrid_model_aptos_best.pth
+
+(This file was originally saved at /content/drive/MyDrive/hybrid_model_aptos_best.pth
+in your training notebook — download/copy it into this folder, or set the
+MODEL_PATH environment variable to point to it elsewhere.)
