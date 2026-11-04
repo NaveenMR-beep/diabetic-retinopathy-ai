@@ -75,7 +75,7 @@ export default function ResultCards({ result }) {
       <Card
         icon={Cpu}
         label="Backbone Architecture"
-        value="EfficientNet + ResNet50"
+        value="EfficientNetB0 + ResNet50"
         sub="3,328-D Feature Vector Fusion"
       />
     </div>

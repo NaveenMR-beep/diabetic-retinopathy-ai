@@ -67,7 +67,7 @@ export default function ImagePreviewCard({ file, previewUrl, onAnalyze, disabled
                 <Cpu size={18} className="text-cyan-400 shrink-0" />
                 <div>
                   <p className="text-slate-400 text-[10px]">Target Model</p>
-                  <p className="font-semibold text-white mt-0.5">EfficientNet + ResNet50</p>
+                  <p className="font-semibold text-white mt-0.5">EfficientNetB0 + ResNet50</p>
                 </div>
               </div>
             </div>

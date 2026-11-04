@@ -36,7 +36,7 @@ export const URGENT_SYMPTOMS_TEXT =
 
 export const ANALYSIS_STEPS = [
   "Preprocessing image",
-  "Extracting EfficientNet features",
+  "Extracting EfficientNetB0 features",
   "Extracting ResNet50 features",
   "Combining deep features",
   "Generating prediction",
